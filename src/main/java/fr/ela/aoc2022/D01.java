@@ -1,8 +1,6 @@
 package fr.ela.aoc2022;
 
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Stack;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -20,6 +18,10 @@ public class D01 extends AoC {
         stack.push(total);
     };
 
+    private int findTopNElves(Stream<Integer> lines, int number) {
+        return lines.collect(Stack::new, accumulator, Stack::addAll)
+                .stream().sorted(Comparator.reverseOrder()).limit(number).mapToInt(Integer::intValue).sum();
+    }
     @Override
     public void run() {
         System.out.println("Most Carrying Elf : " + findTopNElves(stream(getTestInputPath(), mapper), 1));
@@ -29,9 +31,5 @@ public class D01 extends AoC {
     }
 
 
-    private int findTopNElves(Stream<Integer> lines, int number) {
-        return lines.collect(Stack::new, accumulator, Stack::addAll)
-                .stream().sorted(Comparator.reverseOrder()).limit(number).mapToInt(Integer::intValue).sum();
-    }
 
 }
