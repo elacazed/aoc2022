@@ -22,7 +22,7 @@ public class D05 extends AoC {
         void applyPartTwo(List<Stack<Character>> list) {
             Stack<Character> fromStack = list.get(from - 1);
             Stack<Character> toStack = list.get(to - 1);
-            Stack s = new Stack();
+            Stack<Character> s = new Stack<>();
             apply(fromStack, s);
             apply(s, toStack);
         }
@@ -71,7 +71,7 @@ public class D05 extends AoC {
         if (index < line.length()) {
             char c = line.charAt(index);
             if (c != ' ' && ! Character.isDigit(c)) {
-                stack.add(0, line.charAt(index));
+                stack.add(0, c);
             }
         }
     }
