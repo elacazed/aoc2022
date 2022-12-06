@@ -7,24 +7,26 @@ import java.util.function.IntPredicate;
 public class D06 extends AoC {
 
 
-    public int getIndex(String line) {
-        char[] start = new char[4];
-        line.getChars(0, 4, start, 0);
+    public int getIndex(String line, int length) {
+        char[] start = new char[length];
+        line.getChars(0, length, start, 0);
         CharsWindow window = new CharsWindow(start);
-        int value = line.chars().skip(4).dropWhile(window).findFirst().orElse(-1);
+        int value = line.chars().skip(length).dropWhile(window).findFirst().orElse(-1);
         return window.index;
     }
 
 
     public class CharsWindow implements IntPredicate {
         private int index = 0;
+        private final int size;
         private LinkedList<Integer> buffer = new LinkedList<>();
 
         public CharsWindow(char[] start) {
             for (char c : start) {
                 buffer.add((int) c);
             }
-            index = 4;
+            size = start.length;
+            index = start.length;
         }
 
         @Override
@@ -32,7 +34,7 @@ public class D06 extends AoC {
             index++;
             buffer.removeFirst();
             buffer.addLast(c);
-            return (buffer.stream().distinct().count() < 4);
+            return (buffer.stream().distinct().count() < size);
         }
     }
 
@@ -40,10 +42,15 @@ public class D06 extends AoC {
     @Override
     public void run() {
         stream(getTestInputPath()).forEach(
-                s -> System.out.println("Test result : "+getIndex(s)));
+                s -> System.out.println("Test result 1 : "+getIndex(s, 4)));
 
         stream(getInputPath()).forEach(
-                s -> System.out.println("Real result : "+getIndex(s)));
+                s -> System.out.println("Real result 1 : "+getIndex(s, 4)));
+        stream(getTestInputPath()).forEach(
+                s -> System.out.println("Test result 2 : "+getIndex(s, 14)));
+
+        stream(getInputPath()).forEach(
+                s -> System.out.println("Real result 3 : "+getIndex(s, 14)));
 
     }
 }
