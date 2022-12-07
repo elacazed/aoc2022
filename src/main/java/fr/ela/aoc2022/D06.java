@@ -1,16 +1,18 @@
 package fr.ela.aoc2022;
 
 
-import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 
 public class D06 extends AoC {
 
 
     public int getIndex(String line, int length) {
-        char[] start = new char[length];
-        line.getChars(0, length, start, 0);
+        int[] start = new int[length];
+        IntStream.range(0, length).forEach(i -> start[i] = line.charAt(i));
         CharsWindow window = new CharsWindow(start);
+
         int value = line.chars().skip(length).dropWhile(window).findFirst().orElse(-1);
         return window.index;
     }
@@ -19,22 +21,20 @@ public class D06 extends AoC {
     public class CharsWindow implements IntPredicate {
         private int index = 0;
         private final int size;
-        private LinkedList<Integer> buffer = new LinkedList<>();
+        private int[] buffer;
 
-        public CharsWindow(char[] start) {
-            for (char c : start) {
-                buffer.add((int) c);
-            }
+        public CharsWindow(int[] start) {
+            buffer = start;
             size = start.length;
             index = start.length;
         }
 
         @Override
         public boolean test(int c) {
+            int pos = index % size;
+            buffer[pos] = c;
             index++;
-            buffer.removeFirst();
-            buffer.addLast(c);
-            return (buffer.stream().distinct().count() < size);
+            return (Arrays.stream(buffer).distinct().count() < size);
         }
     }
 
