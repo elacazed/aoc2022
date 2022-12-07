@@ -2,9 +2,11 @@ package fr.ela.aoc2022;
 
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class D07 extends AoC {
 
@@ -55,18 +57,18 @@ public class D07 extends AoC {
         }
 
     }
-    public FsCrawler buildFs(List<String> lines, Predicate<File> predicate) {
+    public FsCrawler buildFs(List<String> lines) {
         FsCrawler crawler = new FsCrawler();
-        crawler.crawl(lines, predicate);
+        crawler.crawl(lines);
         return crawler;
     }
 
     public class FsCrawler {
         private File root = new File(null, "/");
 
-        private List<File> matching = new ArrayList<>();
+        private List<File> directories = new ArrayList<>();
 
-        private void crawl(List<String> input, Predicate<File> predicate) {
+        private void crawl(List<String> input) {
             File current = root;
 
             Iterator<String> iterator = input.iterator();
@@ -77,15 +79,10 @@ public class D07 extends AoC {
                 } else {
                     if (line.startsWith("dir")) {
                         var newDir = current.addDirectory(line.substring(4));
-                        if (predicate.test(newDir)) {
-                            matching.add(newDir);
-                        }
+                        directories.add(newDir);
                     } else {
                         String[] fileDef = line.split("\s");
                         File f = current.addFile(fileDef[1], Integer.parseInt(fileDef[0]));
-                        if (predicate.test(f)) {
-                            matching.add(f);
-                        }
                     }
                 }
             }
@@ -111,13 +108,23 @@ public class D07 extends AoC {
     }
 
 
+    int spaceNeeded(FsCrawler crawler) {
+        return 30000000 - (70000000 - crawler.root.size());
+    }
+
     @Override
     public void run() {
-        FsCrawler testCrawler = buildFs(list(getTestInputPath()), File::isDir);
-        System.out.println("Test part one "+testCrawler.matching.stream().mapToInt(File::size).filter(s -> s <= 100000).sum());
+        FsCrawler testCrawler = buildFs(list(getTestInputPath()));
+        System.out.println("Test part one "+testCrawler.directories.stream().mapToInt(File::size).filter(s -> s <= 100000).sum());
 
+        int size = testCrawler.directories.stream().mapToInt(File::size).sorted().filter(s -> s >= spaceNeeded(testCrawler)).findFirst().orElseThrow();
+        System.out.println("Test part two "+size);
 
-        FsCrawler crawler = buildFs(list(getInputPath()), File::isDir);
-        System.out.println("Test part one "+crawler.matching.stream().mapToInt(File::size).filter(s -> s <= 100000).sum());
+        FsCrawler crawler = buildFs(list(getInputPath()));
+        System.out.println("Real part one "+crawler.directories.stream().mapToInt(File::size).filter(s -> s <= 100000).sum());
+
+        size = crawler.directories.stream().mapToInt(File::size).sorted().filter(s -> s >= spaceNeeded(crawler)).findFirst().orElseThrow();
+        System.out.println("Real part two "+size);
+
     }
 }
