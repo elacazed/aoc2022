@@ -1,71 +1,110 @@
 package fr.ela.aoc2022;
 
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
+import com.sun.source.tree.BreakTree;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class D08 extends AoC {
 
     record Tree(int x, int y, int height) {
     }
 
+    record Forest(int size, List<Tree> trees, List<Tree[]> horizontally, List<Tree[]> vertically) {
 
-    public Set<Tree> getVisibleTrees(Tree[] line) {
-        Accumulator increasing = new Accumulator();
-        Accumulator decreasing = new Accumulator();
-        for (int i = 0; i < line.length; i++) {
-            increasing.accept(line[i]);
-            decreasing.accept(line[line.length - 1 - i]);
+        Tree[] getHorizontalLine(Tree tree) {
+            return horizontally.get(tree.y);
         }
-        increasing.trees.addAll(decreasing.trees);
-        return increasing.trees;
-    }
 
-    public class Accumulator implements Consumer<Tree> {
-        private Set<Tree> trees = new HashSet<>();
-        int max = -1;
+        Tree[] getVerticalLine(Tree tree) {
+            return vertically.get(tree.x);
+        }
 
-        @Override
-        public void accept(Tree value) {
-            if (value.height > max) {
-                max = value.height;
-                trees.add(value);
+        public int getVisibleTrees() {
+            Set<Tree> result = new HashSet<>();
+            horizontally.forEach(line -> addVisibleTrees(line, result));
+            vertically.forEach(line -> addVisibleTrees(line, result));
+            return result.size();
+        }
+
+        private void addVisibleTrees(Tree[] line, Set<Tree> trees) {
+            int max1 = -1;
+            int max2 = -1;
+            for (int i = 0; i < line.length; i++) {
+                if (line[i].height > max1) {
+                    trees.add(line[i]);
+                    max1 = line[i].height;
+                }
+                if (line[size - 1 - i].height > max2) {
+                    trees.add(line[size - 1 - i]);
+                    max2 = line[size - 1 - i].height;
+                }
             }
         }
 
+        public long getHighestVisibilityScore() {
+            return trees.stream().mapToInt(this::getVisibilityScore).max().orElseThrow();
+        }
+
+
+        public int getVisibilityScore(Tree tree) {
+            return getVisibilityScore(tree.y, tree.height, getVerticalLine(tree)) * getVisibilityScore(tree.x, tree.height, getHorizontalLine(tree));
+        }
+
+        int getVisibilityScore(int pos, int height, Tree[] line) {
+            if (pos == 0 || pos == size - 1) {
+                return 0;
+            }
+            int left = 1;
+            int right = 1;
+            for (int i = pos + 1; i < size - 1; i++) {
+                if (line[i].height >= height) {
+                    break;
+                }
+                right++;
+            }
+            for (int i = pos - 1; i > 0; i--) {
+                if (line[i].height >= height) {
+                    break;
+                }
+                left++;
+            }
+            return left * right;
+        }
+
     }
 
-    private List<Tree[]> readInput(List<String> lines) {
+    private Forest readInput(List<String> lines) {
         int size = lines.size();
-        Tree[][] treeLines = new Tree[2*size][size];
-        for (int i = 0; i < 2*size; i++) {
-            treeLines[i] = new Tree[size];
+        List<Tree[]> horizontalLines = new ArrayList<>();
+        List<Tree[]> verticalLines = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            horizontalLines.add(new Tree[size]);
+            verticalLines.add(new Tree[size]);
         }
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            for (int j = 0; j < lines.size(); j++) {
-                Tree t = new Tree(i, j, line.charAt(j));
-                treeLines[i][j] = t;
-                treeLines[size+j][i] = t;
+        List<Tree> set = new ArrayList<>();
+        for (int y = 0; y < lines.size(); y++) {
+            String hLine = lines.get(y);
+            for (int x = 0; x < lines.size(); x++) {
+                Tree t = new Tree(x, y, hLine.charAt(x) - '0');
+                horizontalLines.get(y)[x] = t;
+                verticalLines.get(x)[y] = t;
+                set.add(t);
             }
         }
-        return Arrays.asList(treeLines);
+        return new Forest(size, set, horizontalLines, verticalLines);
     }
 
-    public long getVisibleTrees(List<String> lines) {
-        return readInput(lines).stream().map(this::getVisibleTrees).flatMap(Set::stream).distinct().count();
-    }
 
     @Override
     public void run() {
-
-        System.out.println("Test part one : "+getVisibleTrees(list(getTestInputPath())));
-        System.out.println("Real part one : "+getVisibleTrees(list(getInputPath())));
-        System.out.println("Test part two : ");
-        System.out.println("Real part two : ");
+        Forest testForest = readInput(list(getTestInputPath()));
+        Forest forest = readInput(list(getInputPath()));
+        System.out.println("Test part one : " + testForest.getVisibleTrees());
+        System.out.println("Real part one : " + forest.getVisibleTrees());
+        System.out.println("Test part two : " + testForest.getHighestVisibilityScore());
+        System.out.println("Real part two : " + forest.getHighestVisibilityScore());
 
     }
 }
