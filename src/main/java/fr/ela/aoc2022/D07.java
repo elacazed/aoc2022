@@ -2,11 +2,8 @@ package fr.ela.aoc2022;
 
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 public class D07 extends AoC {
 
@@ -63,6 +60,7 @@ public class D07 extends AoC {
         return crawler;
     }
 
+
     public class FsCrawler {
         private File root = new File(null, "/");
 
@@ -71,9 +69,7 @@ public class D07 extends AoC {
         private void crawl(List<String> input) {
             File current = root;
 
-            Iterator<String> iterator = input.iterator();
-            while (iterator.hasNext()) {
-                String line = iterator.next();
+            for (String line : input) {
                 if (line.charAt(0) == '$') {
                     current = command(current, line.substring(2).split("\s"));
                 } else {
