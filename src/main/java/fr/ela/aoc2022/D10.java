@@ -1,42 +1,40 @@
 package fr.ela.aoc2022;
 
 
+import java.util.Arrays;
 import java.util.List;
 
 public class D10 extends AoC {
-/*
-Maybe you can learn something by looking at the value of the X register throughout execution.
- For now, consider the signal strength (the cycle number multiplied by the value of the X register)
- during the 20th cycle and every 40 cycles after that (that is, during the 20th, 60th, 100th, 140th, 180th, and 220th cycles).
-
-20 * 21 = 420.
-60 * 19 = 1140.
-100 * 18 = 1800.
-140 * 21 = 2940.
-180 * 16 = 2880.
-220 * 18 = 3960.
-
- */
 
     class Computer {
         int cycle = 0;
         int value = 1;
         int accumulator = 0;
+        char[] screen = new char[6 * 40];
+
+        String display() {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 6; i++) {
+                sb.append(new String(Arrays.copyOfRange(screen, i * 40, i * 40 + 40))).append("\n");
+            }
+            return sb.toString();
+        }
 
         void incCycle() {
             cycle++;
-            if (cycle > 0 && cycle <= 220 && cycle%40 == 20) {
-                System.out.println("Adding value "+cycle+"*"+value+" = "+cycle*value);
+            screen[cycle -1] = '.';
+            if (cycle <= 220 && cycle % 40 == 20) {
                 accumulator += cycle * value;
+            }
+            int col = (cycle - 1) % 40;
+            if (value - 1 <= col && col <= value + 1) {
+                screen[cycle - 1] = '#';
             }
         }
 
         void execute(String command) {
-            if ("noop".equals(command)) {
-               incCycle();
-            }
+            incCycle();
             if (command.startsWith("addx")) {
-                incCycle();
                 incCycle();
                 int amount = Integer.parseInt(command.substring(5));
                 value = value + amount;
@@ -52,10 +50,12 @@ Maybe you can learn something by looking at the value of the X register througho
 
     @Override
     public void run() {
-        System.out.println("Test part one : " + calculate(list(getTestInputPath())).accumulator);
-        System.out.println("Real part one : " + calculate(list(getInputPath())).accumulator);
-//        System.out.println("Test part two : " + path(list(getTestInputPath(), this::readMove), 10).size());
-//        System.out.println("Real part two : " + path(list(getInputPath(), this::readMove), 10).size());
+        Computer test = calculate(list(getTestInputPath()));
+        Computer real = calculate(list(getInputPath()));
+        System.out.println("Test part one : " + test.accumulator);
+        System.out.println("Real part one : " + real.accumulator);
+        System.out.println("Test part two : \n" + test.display());
+        System.out.println("Real part two : \n" + real.display());
 
     }
 }
