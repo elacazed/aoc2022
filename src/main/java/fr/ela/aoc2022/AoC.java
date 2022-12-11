@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -51,6 +52,23 @@ public abstract class AoC {
             throw new RuntimeException(ioe);
         }
     }
+
+
+    public List<List<String>> splitOnEmptyLines(Path path) {
+        List<List<String>> result = new ArrayList<>();
+        List<String> current = new ArrayList<>();
+        result.add(current);
+        for (String line : list(path)) {
+            if (line.isEmpty()) {
+                current = new ArrayList<>();
+                result.add(current);
+            } else {
+                current.add(line);
+            }
+        }
+        return result;
+    }
+
 
     public <T> Stream<T> oneLineStream(Path path, String sep, Function<String, T> mapper) {
         return Arrays.stream(readFile(path).split(sep)).map(mapper);
