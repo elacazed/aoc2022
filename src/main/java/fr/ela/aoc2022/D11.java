@@ -3,79 +3,65 @@ package fr.ela.aoc2022;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.IntPredicate;
-import java.util.function.IntUnaryOperator;
+import java.util.function.LongUnaryOperator;
 import java.util.stream.Collectors;
 
 public class D11 extends AoC {
 
 
     public class Item {
-        static int ID = 0;
-        final int id;
-        int worryLevel;
+        long worryLevel;
+        final int startingWorryLevel;
 
         public Item(int worryLevel) {
             this.worryLevel = worryLevel;
-            this.id = ID;
-            ID++;
+            startingWorryLevel = worryLevel;
         }
 
-        public void afterInspection() {
-            worryLevel = worryLevel / 3;
-        }
-
-        public String toString() {
-            return "{id:" + id + ", wl:" + worryLevel + "}";
+        public void afterInspection(LongUnaryOperator afterInspection) {
+            this.worryLevel = afterInspection.applyAsLong(worryLevel);
         }
     }
 
 
     public class Monkey {
         private final int id;
-        private final IntUnaryOperator worryLevelFunction;
+        private final LongUnaryOperator worryLevelFunction;
         private final LinkedList<Item> items;
-        private final IntPredicate decider;
+        private final int divisor;
         private final int ifTrue;
         private final int ifFalse;
 
-        private List<Integer> inspected = new ArrayList<>();
+        private long inspected = 0L;
 
-        public Monkey(int id, List<Item> items, IntUnaryOperator worryLevelFunction, IntPredicate decider, int ifTrue, int ifFalse) {
+        public Monkey(int id, List<Item> items, LongUnaryOperator worryLevelFunction, int divisor, int ifTrue, int ifFalse) {
             this.id = id;
             this.worryLevelFunction = worryLevelFunction;
-            this.decider = decider;
+            this.divisor = divisor;
             this.ifTrue = ifTrue;
             this.ifFalse = ifFalse;
             this.items = new LinkedList<>(items);
         }
 
-        public String toString() {
-            return "Monkey [" + id + "] : [" + items.stream().map(Objects::toString).collect(Collectors.joining(", ")) + "], passTo " + ifTrue + "," + ifFalse;
-        }
-
         public void inspect(Item item) {
-            inspected.add(item.id);
-            item.worryLevel = worryLevelFunction.applyAsInt(item.worryLevel);
+            inspected++;
+            item.worryLevel = worryLevelFunction.applyAsLong(item.worryLevel);
         }
 
-        public int countInspected() {
-            return inspected.size();
+        public long countInspected() {
+            return inspected;
         }
 
-        public void turn(Monkey[] monkeys) {
+        public void turn(Monkey[] monkeys, LongUnaryOperator afterInspection) {
             if (items.isEmpty()) {
                 return;
             }
-            while (! items.isEmpty()) {
+            while (!items.isEmpty()) {
                 Item current = items.pollFirst();
                 inspect(current);
-                current.afterInspection();
-                if (decider.test(current.worryLevel)) {
-                    monkeys[ifTrue].receives(current);
-                } else {
-                    monkeys[ifFalse].receives(current);
-                }
+                current.afterInspection(afterInspection);
+                int dest = current.worryLevel % divisor == 0 ? ifTrue : ifFalse;
+                monkeys[dest].receives(current);
             }
         }
 
@@ -85,26 +71,18 @@ public class D11 extends AoC {
 
     }
 
-    public void round(Monkey[] monkeys) {
+    public void round(Monkey[] monkeys, LongUnaryOperator afterInspection) {
         for (Monkey monkey : monkeys) {
-            monkey.turn(monkeys);
+            monkey.turn(monkeys, afterInspection);
         }
     }
 
-    /*
-        Monkey 0:
-          Starting items: 79, 98
-          Operation: new = old * 19
-          Test: divisible by 23
-            If true: throw to monkey 2
-            If false: throw to monkey 3
-     */
     public Monkey readMonkey(List<String> lines) {
         String monkeyid = lines.get(0);
         int index = Integer.parseInt(monkeyid.substring(7, monkeyid.length() - 1));
         List<Item> items = Arrays.stream(lines.get(1).substring(18).split(",")).map(String::trim)
                 .mapToInt(Integer::parseInt).mapToObj(Item::new).toList();
-        IntUnaryOperator wf = i -> i;
+        LongUnaryOperator wf = i -> i;
         String[] op = lines.get(2).substring("  Operation: new = ".length()).split(" ");
         boolean sameOperands = op[0].equals("old") && op[2].equals("old");
 
@@ -117,11 +95,10 @@ public class D11 extends AoC {
                 break;
         }
         int dec = Integer.parseInt(lines.get(3).substring("  Test: divisible by ".length()));
-        IntPredicate decider = i -> i % dec == 0;
         int ifTrue = Integer.parseInt(lines.get(4).substring("    If true: throw to monkey ".length()));
         int ifFalse = Integer.parseInt(lines.get(5).substring("    If false: throw to monkey ".length()));
 
-        return new Monkey(index, items, wf, decider, ifTrue, ifFalse);
+        return new Monkey(index, items, wf, dec, ifTrue, ifFalse);
     }
 
     public Monkey[] readInput(Path path) {
@@ -129,23 +106,34 @@ public class D11 extends AoC {
         return monks.stream().map(this::readMonkey).toList().toArray(new Monkey[monks.size()]);
     }
 
-    private int partOne(Monkey[] test) {
+    public long getMonkeyScore(Monkey[] monkeys) {
+        return Arrays.stream(monkeys).mapToLong(Monkey::countInspected).sorted().skip(monkeys.length - 2).reduce(1, (a, b) -> a * b);
+    }
+
+    private long partOne(Path path) {
+        Monkey[] monkeys = readInput(path);
         for (int i = 0; i < 20; i++) {
-            round(test);
+            round(monkeys, wl -> wl / 3);
         }
-        int result = Arrays.stream(test).mapToInt(Monkey::countInspected).sorted().skip(test.length -2).reduce(1, (a, b) -> a * b);
-        return result;
+        return getMonkeyScore(monkeys);
+    }
+
+    private long partTwo(Path path) {
+        Monkey[] monkeys = readInput(path);
+        long val = Arrays.stream(monkeys).mapToLong(m -> m.divisor).reduce(1, (a,b) -> a*b);
+        for (int i = 0; i < 10000; i++) {
+            round(monkeys, wl -> wl % val);
+        }
+        return getMonkeyScore(monkeys);
     }
 
     @Override
     public void run() {
-        Monkey[] test = readInput(getTestInputPath());
-        int result = partOne(test);
-        System.out.println("Test part one : "+result);
+        System.out.println("Test part one : " + partOne(getTestInputPath()));
+        System.out.println("Real part one : " + partOne(getInputPath()));
 
-        Monkey[] real = readInput(getInputPath());
-        result = partOne(real);
-        System.out.println("Real part one : "+result);
+        System.out.println("Test part two : " + partTwo(getTestInputPath()));
+        System.out.println("Real part one : " + partTwo(getInputPath()));
+
     }
-
 }
