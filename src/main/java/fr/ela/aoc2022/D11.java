@@ -2,20 +2,19 @@ package fr.ela.aoc2022;
 
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.LongUnaryOperator;
-import java.util.stream.Collectors;
 
 public class D11 extends AoC {
 
 
     public class Item {
         long worryLevel;
-        final int startingWorryLevel;
 
         public Item(int worryLevel) {
             this.worryLevel = worryLevel;
-            startingWorryLevel = worryLevel;
         }
 
         public void afterInspection(LongUnaryOperator afterInspection) {
@@ -25,7 +24,6 @@ public class D11 extends AoC {
 
 
     public class Monkey {
-        private final int id;
         private final LongUnaryOperator worryLevelFunction;
         private final LinkedList<Item> items;
         private final int divisor;
@@ -34,8 +32,7 @@ public class D11 extends AoC {
 
         private long inspected = 0L;
 
-        public Monkey(int id, List<Item> items, LongUnaryOperator worryLevelFunction, int divisor, int ifTrue, int ifFalse) {
-            this.id = id;
+        public Monkey(List<Item> items, LongUnaryOperator worryLevelFunction, int divisor, int ifTrue, int ifFalse) {
             this.worryLevelFunction = worryLevelFunction;
             this.divisor = divisor;
             this.ifTrue = ifTrue;
@@ -78,8 +75,6 @@ public class D11 extends AoC {
     }
 
     public Monkey readMonkey(List<String> lines) {
-        String monkeyid = lines.get(0);
-        int index = Integer.parseInt(monkeyid.substring(7, monkeyid.length() - 1));
         List<Item> items = Arrays.stream(lines.get(1).substring(18).split(",")).map(String::trim)
                 .mapToInt(Integer::parseInt).mapToObj(Item::new).toList();
         LongUnaryOperator wf = i -> i;
@@ -98,7 +93,7 @@ public class D11 extends AoC {
         int ifTrue = Integer.parseInt(lines.get(4).substring("    If true: throw to monkey ".length()));
         int ifFalse = Integer.parseInt(lines.get(5).substring("    If false: throw to monkey ".length()));
 
-        return new Monkey(index, items, wf, dec, ifTrue, ifFalse);
+        return new Monkey(items, wf, dec, ifTrue, ifFalse);
     }
 
     public Monkey[] readInput(Path path) {
