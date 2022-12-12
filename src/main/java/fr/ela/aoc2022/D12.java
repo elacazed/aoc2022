@@ -58,7 +58,7 @@ public class D12 extends AoC {
 
         public int findShortestPath(Position start, Position end) {
             Map<Position, Integer> pathLengths = new HashMap<>();
-            Map<Position, Position> parent = new HashMap<>();
+            Map<Position, Position> exploredFrom = new HashMap<>();
             LinkedList<Position> queue = new LinkedList<>();
             pathLengths.put(start, 0);
             queue.add(start);
@@ -66,22 +66,22 @@ public class D12 extends AoC {
                 Position pos = queue.poll();
                 if (pos.equals(end)) {
                     ArrayList<Position> path = new ArrayList<>();
-                    while (parent.containsKey(pos)) {
+                    while (exploredFrom.containsKey(pos)) {
                         path.add(pos);
-                        pos = parent.get(pos);
+                        pos = exploredFrom.get(pos);
                     }
                     return path.size();
                 }
                 int curHeight = getHeight(pos);
-                for (Position voisin : pos.neighbors().filter(this::isIn).toList()) {
-                    if (getHeight(voisin) > curHeight + 1) {
+                for (Position next : pos.neighbors().filter(this::isIn).toList()) {
+                    if (getHeight(next) > curHeight + 1) {
                         continue;
                     }
                     int pathLength = pathLengths.get(pos) + 1;
-                    if (pathLength < pathLengths.getOrDefault(voisin, Integer.MAX_VALUE)) {
-                        pathLengths.put(voisin, pathLength);
-                        parent.put(voisin, pos);
-                        queue.add(voisin);
+                    if (pathLength < pathLengths.getOrDefault(next, Integer.MAX_VALUE)) {
+                        pathLengths.put(next, pathLength);
+                        exploredFrom.put(next, pos);
+                        queue.add(next);
                     }
                 }
             }
