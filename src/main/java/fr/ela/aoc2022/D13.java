@@ -7,9 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class D13 extends AoC {
 
@@ -18,8 +21,14 @@ public class D13 extends AoC {
 
     @Override
     public void run() {
-        //System.out.println("Test part one : " + partOne(readInput(getTestInputPath())));
-        System.out.println("Real part one : " + partOne(readInput(getInputPath())));
+        List<Pair> testPairs = readInput(getTestInputPath());
+        List<Pair> realPairs = readInput(getInputPath());
+        System.out.println("Test part one : " + partOne(testPairs));
+        System.out.println("Real part one : " + partOne(realPairs));
+
+
+        System.out.println("Test part two : " + partTwo(testPairs));
+        System.out.println("Real part two : " + partTwo(realPairs));
     }
 
     public record Pair(int index, JsonNode left, JsonNode right) {
@@ -31,14 +40,23 @@ public class D13 extends AoC {
     }
 
     public int partOne(List<Pair> pairs) {
-        pairs.stream()
-                .map(p -> p.left+"\n"+p.right+"\n"+(PACKET_COMPARATOR.compare(p.left, p.right) < 0 ? "OK":"KO"))
-                .forEach(System.out::println);
-
         return pairs.stream()
                 .filter(p -> PACKET_COMPARATOR.compare(p.left, p.right) < 0)
-                .mapToInt( p -> p.index)
+                .mapToInt(p -> p.index)
                 .sum();
+    }
+
+    public int partTwo(List<Pair> pairs) {
+        List<JsonNode> nodes = new ArrayList<>();
+        pairs.stream().flatMap(p -> Stream.of(p.left, p.right)).collect(Collectors.toCollection(() -> nodes));
+        JsonNode div1 = parse("[[2]]");
+        JsonNode div2 = parse("[[6]]");
+        nodes.add(div1);
+        nodes.add(div2);
+        nodes.sort(PACKET_COMPARATOR);
+        int index1 = nodes.indexOf(div1)+1;
+        int index2 = nodes.indexOf(div2)+1;
+        return index2*index1;
     }
 
     /*
@@ -66,7 +84,6 @@ public class D13 extends AoC {
             try {
                 if (one.isNumber()) {
                     if (other.isNumber()) {
-                        System.out.println("Comparing ints : " + one.numberValue() + "," + other.numberValue());
                         return one.asInt() - other.asInt();
                     } else {
                         return compareArrays(asArray(one), other);
@@ -93,13 +110,10 @@ public class D13 extends AoC {
             while (it1.hasNext() && it2.hasNext()) {
                 int comparison = compare(it1.next(), it2.next());
                 if (comparison != 0) {
-                    System.out.println("Comparing arrays " + objectMapper.writeValueAsString(one) + ", " + objectMapper.writer().writeValueAsString(other) + " : " + comparison);
                     return comparison;
                 }
             }
-            int comparison = it1.hasNext() ? 1 : it2.hasNext() ? -1 : 0;
-            System.out.println("Comparing arrays " + objectMapper.writeValueAsString(one) + ", " + objectMapper.writer().writeValueAsString(other) + " : " + comparison);
-            return comparison;
+            return it1.hasNext() ? 1 : it2.hasNext() ? -1 : 0;
         }
     };
 
