@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 
 public abstract class AoC {
 
-
     public abstract void run();
 
     public static void repeat(int times, IntConsumer action) {
@@ -100,6 +99,9 @@ public abstract class AoC {
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
+    }
+    boolean inRange(int x, int low, int high) {
+        return x >= low && x < high;
     }
 
     public static void main(String[] args) {
