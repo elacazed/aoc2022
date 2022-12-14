@@ -28,13 +28,13 @@ public class D14 extends AoC {
         public boolean addSand() {
             int x = 500;
             int y = 0;
-            while (! stopCondition(x, y)) {
-                if (! contains(new Position(x, y + 1))) {
+            while (!stopCondition(x, y)) {
+                if (!contains(new Position(x, y + 1))) {
                     y++;
-                } else if (! contains(new Position(x - 1, y + 1))) {
+                } else if (!contains(new Position(x - 1, y + 1))) {
                     y++;
                     x--;
-                } else if (! contains(new Position(x + 1, y + 1))) {
+                } else if (!contains(new Position(x + 1, y + 1))) {
                     y++;
                     x++;
                 } else {
@@ -57,6 +57,7 @@ public class D14 extends AoC {
     public class Grid2 extends Grid {
 
         final Position start;
+
         public Grid2(Set<Position> positions) {
             super(positions);
             start = new Position(500, 0);
@@ -114,13 +115,15 @@ public class D14 extends AoC {
 
     @Override
     public void run() {
-        Grid testGrid = new Grid(stream(getTestInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        Set<Position> testPositions = stream(getTestInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet());
+        Grid testGrid = new Grid(testPositions);
         System.out.println("Test part one : " + pourSand(testGrid));
-        Grid2 testGrid2 = new Grid2(stream(getTestInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        Grid2 testGrid2 = new Grid2(testPositions);
         System.out.println("Test part two : " + pourSand(testGrid2));
-        Grid grid = new Grid(stream(getInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        Set<Position> realPositions = stream(getInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet());
+        Grid grid = new Grid(realPositions);
         System.out.println("Real part one : " + pourSand(grid));
-        Grid2 grid2 = new Grid2(stream(getInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        Grid2 grid2 = new Grid2(realPositions);
         System.out.println("Real part two : " + pourSand(grid2));
     }
 }
