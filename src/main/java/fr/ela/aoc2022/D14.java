@@ -18,7 +18,7 @@ public class D14 extends AoC {
     public class Grid {
         Set<Position> grid = new HashSet<>();
 
-        private final int maxY;
+        protected final int maxY;
 
         public Grid(Set<Position> positions) {
             grid.addAll(positions);
@@ -28,13 +28,13 @@ public class D14 extends AoC {
         public boolean addSand() {
             int x = 500;
             int y = 0;
-            while (y <= maxY) {
-                if (!grid.contains(new Position(x, y + 1))) {
+            while (! stopCondition(x, y)) {
+                if (! contains(new Position(x, y + 1))) {
                     y++;
-                } else if (!grid.contains(new Position(x - 1, y + 1))) {
+                } else if (! contains(new Position(x - 1, y + 1))) {
                     y++;
                     x--;
-                } else if (!grid.contains(new Position(x + 1, y + 1))) {
+                } else if (! contains(new Position(x + 1, y + 1))) {
                     y++;
                     x++;
                 } else {
@@ -43,6 +43,35 @@ public class D14 extends AoC {
                 }
             }
             return false;
+        }
+
+        boolean stopCondition(int x, int y) {
+            return y > maxY;
+        }
+
+        boolean contains(Position p) {
+            return grid.contains(p);
+        }
+    }
+
+    public class Grid2 extends Grid {
+
+        final Position start;
+        public Grid2(Set<Position> positions) {
+            super(positions);
+            start = new Position(500, 0);
+        }
+
+        boolean stopCondition(int x, int y) {
+            return contains(start);
+        }
+
+        boolean contains(Position p) {
+            if (p.y == maxY + 2) {
+                return true;
+            } else {
+                return grid.contains(p);
+            }
         }
     }
 
@@ -71,7 +100,7 @@ public class D14 extends AoC {
         return positions;
     }
 
-    public int partOne(Grid grid) {
+    public int pourSand(Grid grid) {
         boolean cont = false;
         int count = 0;
         do {
@@ -86,8 +115,12 @@ public class D14 extends AoC {
     @Override
     public void run() {
         Grid testGrid = new Grid(stream(getTestInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
-        System.out.println("Test part one : " + partOne(testGrid));
+        System.out.println("Test part one : " + pourSand(testGrid));
+        Grid2 testGrid2 = new Grid2(stream(getTestInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        System.out.println("Test part two : " + pourSand(testGrid2));
         Grid grid = new Grid(stream(getInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
-        System.out.println("Real part one : " + partOne(grid));
+        System.out.println("Real part one : " + pourSand(grid));
+        Grid2 grid2 = new Grid2(stream(getInputPath()).map(this::parse).flatMap(Set::stream).collect(Collectors.toSet()));
+        System.out.println("Real part two : " + pourSand(grid2));
     }
 }
