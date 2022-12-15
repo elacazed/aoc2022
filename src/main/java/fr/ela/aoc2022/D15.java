@@ -1,13 +1,11 @@
 package fr.ela.aoc2022;
 
 
+import java.math.BigInteger;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class D15 extends AoC {
 
@@ -16,10 +14,39 @@ public class D15 extends AoC {
         int distance(Position other) {
             return Math.abs(x - other.x) + Math.abs(y - other.y);
         }
+
+        //x coordinate by 4000000 and then adding its y coordinate.
+        public String tunningFrequency() {
+            return BigInteger.valueOf(x).multiply(BigInteger.valueOf(4000000L)).add(BigInteger.valueOf(y)).toString();
+        }
     }
 
     record Range(int left, int right) {
+        int size() {
+            return right - left;
+        }
+    }
 
+    public List<Range> mergeRanges(List<Range> ranges) {
+        if (ranges.isEmpty()) {
+            return ranges;
+        }
+        ranges.sort(Comparator.comparingInt(Range::left));
+
+        List<Range> result = new ArrayList<>();
+        Range current = ranges.get(0);
+
+        for (int i = 1; i < ranges.size(); i++) {
+            Range range = ranges.get(i);
+            if (range.left <= current.right + 1) {
+                current = new Range(current.left, Math.max(range.right, current.right));
+            } else {
+                result.add(current);
+                current = range;
+            }
+        }
+        result.add(current);
+        return result;
     }
 
     public class Sensor {
@@ -38,16 +65,14 @@ public class D15 extends AoC {
             return pos.distance(p) > range;
         }
 
-        Set<Position> getInRangePosition(int y) {
+        Range getScannedRangeAtLine(int y) {
             Position closestOnLine = new Position(pos.x, y);
             int distance = range - pos.distance(closestOnLine);
             // La ligne est trop loin
             if (distance < 0) {
-                return Set.of();
+                return null;
             } else {
-                return IntStream.range(pos.x - distance, pos.x + distance +1)
-                        .mapToObj(x -> new Position(x, y))
-                        .collect(Collectors.toSet());
+                return new Range(pos.x - distance, pos.x + distance);
             }
         }
 
@@ -82,11 +107,26 @@ public class D15 extends AoC {
         }
 
         public long countInRangePositions(int y) {
-            Set<Position> set = sensors.stream().map(sensor -> sensor.getInRangePosition(y))
-                    .flatMap(Set::stream)
-                    .collect(Collectors.toCollection(HashSet::new));
-            set.removeAll(positions);
-            return set.size();
+            return getRangesInSightOfBeacons(y)
+                    .stream().mapToInt(Range::size)
+                    .sum();
+        }
+
+        public List<Range> getRangesInSightOfBeacons(int y) {
+            List<Range> list = new ArrayList<>(sensors.stream().map(sensor -> sensor.getScannedRangeAtLine(y)).filter(Objects::nonNull).toList());
+            return mergeRanges(list);
+        }
+
+
+        public Position findBeacon(int min, int max) {
+            for (int y = min; y < max; y++) {
+                List<Range> ranges = getRangesInSightOfBeacons(y);
+                if (ranges.size() != 1) {
+                    // We have a hole here!
+                    return new Position(ranges.get(0).right+1, y);
+                }
+            }
+            return null;
         }
 
     }
@@ -114,8 +154,10 @@ public class D15 extends AoC {
     public void run() {
         Grid testGrid = readInput(getTestInputPath());
         System.out.println("Test part one : " + testGrid.countInRangePositions(10));
+        System.out.println("Test part two : " + testGrid.findBeacon(0, 20).tunningFrequency());
 
         Grid grid = readInput(getInputPath());
         System.out.println("Real part one : " + grid.countInRangePositions(2000000));
+        System.out.println("Test part two : " + grid.findBeacon(0, 4000000).tunningFrequency());
     }
 }
