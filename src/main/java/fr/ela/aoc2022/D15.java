@@ -28,7 +28,7 @@ public class D15 extends AoC {
     }
 
     public List<Range> mergeRanges(List<Range> ranges) {
-        if (ranges.isEmpty()) {
+        if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
             return ranges;
         }
         ranges.sort(Comparator.comparingInt(Range::left));
@@ -49,23 +49,20 @@ public class D15 extends AoC {
         return result;
     }
 
-    public class Sensor {
-        private final Position pos;
-        private final Position beacon;
+    public record Sensor(Position pos, int range) {
+    }
 
-        private final int range;
 
-        public Sensor(Position pos, Position beacon) {
-            this.pos = pos;
-            this.beacon = beacon;
-            range = pos.distance(beacon);
+    public class Grid {
+        Map<Integer, List<Range>> ranges = new HashMap<>();
+
+        public void add(Sensor sensor) {
+            for (int y = sensor.pos.y - sensor.range; y < sensor.pos.y + sensor.range; y++) {
+                ranges.computeIfAbsent(y, i -> new ArrayList<>()).add(getScannedRangeAtLine(sensor.pos, sensor.range, y));
+            }
         }
 
-        boolean outOfRange(Position p) {
-            return pos.distance(p) > range;
-        }
-
-        Range getScannedRangeAtLine(int y) {
+        Range getScannedRangeAtLine(Position pos, int range, int y) {
             Position closestOnLine = new Position(pos.x, y);
             int distance = range - pos.distance(closestOnLine);
             // La ligne est trop loin
@@ -76,51 +73,15 @@ public class D15 extends AoC {
             }
         }
 
-    }
-
-
-    public class Grid {
-        Set<Sensor> sensors = new HashSet<>();
-        Set<Position> positions = new HashSet<>();
-
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
-
-        public void add(Sensor sensor) {
-            sensors.add(sensor);
-            positions.add(sensor.beacon);
-            positions.add(sensor.pos);
-            minX = Math.min(Math.min(sensor.beacon.x, sensor.pos.x), minX);
-            minY = Math.min(Math.min(sensor.beacon.y, sensor.pos.y), minY);
-            maxX = Math.max(Math.max(sensor.beacon.x, sensor.pos.x), maxX);
-            maxY = Math.max(Math.max(sensor.beacon.y, sensor.pos.y), maxY);
-        }
-
-        public boolean isOutOfRange(Position pos) {
-            return sensors.stream().allMatch(b -> b.outOfRange(pos));
-        }
-
-        public boolean isInRange(Position pos) {
-            return sensors.stream().anyMatch(b -> !b.outOfRange(pos));
-        }
-
         public long countInRangePositions(int y) {
-            return getRangesInSightOfBeacons(y)
+            return mergeRanges(ranges.get(y))
                     .stream().mapToInt(Range::size)
                     .sum();
         }
 
-        public List<Range> getRangesInSightOfBeacons(int y) {
-            List<Range> list = new ArrayList<>(sensors.stream().map(sensor -> sensor.getScannedRangeAtLine(y)).filter(Objects::nonNull).toList());
-            return mergeRanges(list);
-        }
-
-
         public Position findBeacon(int min, int max) {
-            for (int y = min; y < max; y++) {
-                List<Range> ranges = getRangesInSightOfBeacons(y);
+            for (int y = max-1; y >= min; y--) {
+                List<Range> ranges = mergeRanges(this.ranges.get(y));
                 if (ranges.size() != 1) {
                     // We have a hole here!
                     return new Position(ranges.get(0).right+1, y);
@@ -128,7 +89,6 @@ public class D15 extends AoC {
             }
             return null;
         }
-
     }
 
     private static final Pattern pattern = Pattern.compile("Sensor at x=(-?[0-9]+), y=(-?[0-9]+): closest beacon is at x=(-?[0-9]+), y=(-?[0-9]+)");
@@ -136,8 +96,9 @@ public class D15 extends AoC {
     public Sensor parse(String line) {
         Matcher m = pattern.matcher(line);
         if (m.matches()) {
-            return new Sensor(new Position(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))),
-                    new Position(Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4))));
+            Position s = new Position(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)));
+            Position b = new Position(Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4)));
+            return new Sensor(s, s.distance(b));
         } else {
             throw new IllegalArgumentException(line);
         }
