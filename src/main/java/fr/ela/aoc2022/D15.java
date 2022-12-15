@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class D15 extends AoC {
 
@@ -15,6 +16,10 @@ public class D15 extends AoC {
         int distance(Position other) {
             return Math.abs(x - other.x) + Math.abs(y - other.y);
         }
+    }
+
+    record Range(int left, int right) {
+
     }
 
     public class Sensor {
@@ -35,23 +40,14 @@ public class D15 extends AoC {
 
         Set<Position> getInRangePosition(int y) {
             Position closestOnLine = new Position(pos.x, y);
+            int distance = range - pos.distance(closestOnLine);
             // La ligne est trop loin
-            if (outOfRange(closestOnLine)) {
+            if (distance < 0) {
                 return Set.of();
             } else {
-                Set<Position> positions = new HashSet<>();
-                positions.add(closestOnLine);
-                Position left = new Position(closestOnLine.x + 1, y);
-                while (! outOfRange(left)) {
-                    positions.add(left);
-                    left = new Position(left.x +1, y);
-                }
-                Position right = new Position(closestOnLine.x - 1, y);
-                while (! outOfRange(right)) {
-                    positions.add(right);
-                    right = new Position(right.x -1, y);
-                }
-                return positions;
+                return IntStream.range(pos.x - distance, pos.x + distance +1)
+                        .mapToObj(x -> new Position(x, y))
+                        .collect(Collectors.toSet());
             }
         }
 
@@ -96,6 +92,7 @@ public class D15 extends AoC {
     }
 
     private static final Pattern pattern = Pattern.compile("Sensor at x=(-?[0-9]+), y=(-?[0-9]+): closest beacon is at x=(-?[0-9]+), y=(-?[0-9]+)");
+
     public Sensor parse(String line) {
         Matcher m = pattern.matcher(line);
         if (m.matches()) {
@@ -116,9 +113,9 @@ public class D15 extends AoC {
     @Override
     public void run() {
         Grid testGrid = readInput(getTestInputPath());
-        System.out.println("Test part one : "+testGrid.countInRangePositions(10));
+        System.out.println("Test part one : " + testGrid.countInRangePositions(10));
 
         Grid grid = readInput(getInputPath());
-        System.out.println("Real part one : "+grid.countInRangePositions(2000000));
+        System.out.println("Real part one : " + grid.countInRangePositions(2000000));
     }
 }
