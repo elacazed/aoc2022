@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class D15 extends AoC {
 
@@ -54,12 +55,10 @@ public class D15 extends AoC {
 
 
     public class Grid {
-        Map<Integer, List<Range>> ranges = new HashMap<>();
 
-        public void add(Sensor sensor) {
-            for (int y = sensor.pos.y - sensor.range; y < sensor.pos.y + sensor.range; y++) {
-                ranges.computeIfAbsent(y, i -> new ArrayList<>()).add(getScannedRangeAtLine(sensor.pos, sensor.range, y));
-            }
+        List<Sensor> sensors;
+        public Grid(List<Sensor> sensors) {
+            this.sensors = sensors;
         }
 
         Range getScannedRangeAtLine(Position pos, int range, int y) {
@@ -74,14 +73,18 @@ public class D15 extends AoC {
         }
 
         public long countInRangePositions(int y) {
-            return mergeRanges(ranges.get(y))
+            return getMergedRanges(y)
                     .stream().mapToInt(Range::size)
                     .sum();
         }
 
+        public List<Range> getMergedRanges(int y) {
+            return mergeRanges(sensors.stream().map(s -> getScannedRangeAtLine(s.pos, s.range, y)).filter(Objects::nonNull).collect(Collectors.toList()));
+        }
+
         public Position findBeacon(int min, int max) {
             for (int y = max-1; y >= min; y--) {
-                List<Range> ranges = mergeRanges(this.ranges.get(y));
+                List<Range> ranges = getMergedRanges(y);
                 if (ranges.size() != 1) {
                     // We have a hole here!
                     return new Position(ranges.get(0).right+1, y);
@@ -104,20 +107,14 @@ public class D15 extends AoC {
         }
     }
 
-    public Grid readInput(Path path) {
-        Grid grid = new Grid();
-        stream(path, this::parse).forEach(grid::add);
-        return grid;
-    }
-
     //Sensor at x=2, y=18: closest beacon is at x=-2, y=15
     @Override
     public void run() {
-        Grid testGrid = readInput(getTestInputPath());
+        Grid testGrid = new Grid(list(getTestInputPath(), this::parse));
         System.out.println("Test part one : " + testGrid.countInRangePositions(10));
         System.out.println("Test part two : " + testGrid.findBeacon(0, 20).tunningFrequency());
 
-        Grid grid = readInput(getInputPath());
+        Grid grid =new Grid(list(getInputPath(), this::parse));
         System.out.println("Real part one : " + grid.countInRangePositions(2000000));
         System.out.println("Test part two : " + grid.findBeacon(0, 4000000).tunningFrequency());
     }
