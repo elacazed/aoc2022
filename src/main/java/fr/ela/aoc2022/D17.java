@@ -98,13 +98,14 @@ public class D17 extends AoC {
         boolean lookingForCycle = true;
 
         Map<String, State> cache = new HashMap<>();
-        CacheKey cacheKey = new CacheKey(32);
+        final CacheKey cacheKey;
         private long targetNumber;
         private long heightOfCycles = 0;
 
-        public Pit(int width) {
+        public Pit(int width, int keySize) {
             positions = new HashSet<>();
             this.width = width;
+            this.cacheKey = new CacheKey(keySize);
         }
 
         byte getLine(int y) {
@@ -224,15 +225,16 @@ public class D17 extends AoC {
         }
     }
 
-    public void partOne(String kind, String windConditions) {
-        Pit pit = new Pit(7);
+    public void partOne(String kind, String windConditions, int keySize) {
+        Pit pit = new Pit(7, keySize);
+        //pit.lookingForCycle = false;
         pit.addShapes(2022, Shape.values(), windConditions, 2);
         System.out.println(kind + " Tower Height [part 1]: " + pit.getHeightOfPile());
     }
 
 
-    public void partTwo(String kind, String windConditions) {
-        Pit pit = new Pit(7);
+    public void partTwo(String kind, String windConditions, int keySize) {
+        Pit pit = new Pit(7, keySize);
         pit.addShapes(1000000000000L, Shape.values(), windConditions, 2);
         System.out.println(kind + " Tower Height [part 2]: " + pit.getHeightOfPile());
     }
@@ -240,14 +242,12 @@ public class D17 extends AoC {
 
     @Override
     public void run() {
-        //String testWindConditions = readFile(getTestInputPath());
-        //partOne("Test", testWindConditions);
-        //partTwo("Test", testWindConditions);
+        String testWindConditions = readFile(getTestInputPath());
+        partOne("Test", testWindConditions, 32);
+        partTwo("Test", testWindConditions, 32);
 
         String windConditions = readFile(getInputPath());
-        partOne("Real", windConditions);
-
-
-        //partTwo("Real", windConditions);
+        partOne("Real", windConditions, 64);
+        partTwo("Real", windConditions, 64);
     }
 }
