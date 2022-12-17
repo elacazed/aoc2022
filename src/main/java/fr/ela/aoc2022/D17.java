@@ -1,37 +1,67 @@
 package fr.ela.aoc2022;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.math.BigInteger;
+import java.util.*;
 import java.util.function.Function;
 
 public class D17 extends AoC {
 
-    /*####
-
-            .#.
-            ###
-            .#.
-
-            ..#
-            ..#
-            ###
-
-            #
-            #
-            #
-            #
-
-            ##
-            ##
-
-     */
-    record Position(int x, int y) {
+    record Position(int x, long y) {
     }
 
-    record WindConditions(String conditions) {
-        int wind(int time) {
-            return conditions.charAt(time % conditions.length()) == '>' ? 1 : -1;
+    static class WindConditions {
+        private final String conditions;
+        private int index = 0;
+        private final int size;
+
+        WindConditions(String conditions) {
+            this.conditions = conditions;
+            this.size = conditions.length();
+        }
+
+        int wind() {
+            int wind = conditions.charAt(index) == '>' ? 1 : -1;
+            index = (index + 1) % size;
+            return wind;
+        }
+    }
+
+    class CacheKey extends LinkedList<Byte> {
+
+        final int patternDetectionSize;
+        int top;
+        int bottom;
+
+        public CacheKey(int patternDetectionSize) {
+            this.patternDetectionSize = patternDetectionSize;
+            top = 0;
+            bottom = 0;
+        }
+
+        @Override
+        public boolean add(Byte aByte) {
+            if (size() == patternDetectionSize) {
+                removeFirst();
+                bottom++;
+            }
+            top++;
+            return super.add(aByte);
+        }
+
+        public String getKey() {
+            byte[] bytes = new byte[patternDetectionSize];
+            int i = 0;
+            for (; i < Math.min(patternDetectionSize, size()); i++) {
+                bytes[i] = get(i);
+            }
+            for (; i < patternDetectionSize; i++) {
+                bytes[i] = 0;
+            }
+            return new BigInteger(bytes).toString(16);
+        }
+
+        public boolean isComplete() {
+            return size() == patternDetectionSize;
         }
     }
 
@@ -55,22 +85,40 @@ public class D17 extends AoC {
         List<Position> getAllPositions(Position bottomleft) {
             return positions.apply(bottomleft);
         }
+    }
 
-        boolean canMoveSideways(int x, int width) {
-            return x >= 0 && x + this.width <= width;
-        }
-
-
+    record State(long shapes, long topOfPile) {
     }
 
     public class Pit {
         final Set<Position> positions;
         final int width;
-        int topOfPile = 0;
+        long topOfPile = 0;
+        long nbShapesInPit = 0;
+        boolean lookingForCycle = true;
+
+        Map<String, State> cache = new HashMap<>();
+        CacheKey cacheKey = new CacheKey(32);
+        private long targetNumber;
+        private long heightOfCycles = 0;
 
         public Pit(int width) {
             positions = new HashSet<>();
             this.width = width;
+        }
+
+        byte getLine(int y) {
+            byte b = 0;
+            for (int i = 0; i < 7; i++) {
+                if (contains(new Position(i, y))) {
+                    b |= 1 << i;
+                }
+            }
+            return b;
+        }
+
+        public long getHeightOfPile() {
+            return topOfPile+heightOfCycles;
         }
 
         public boolean contains(Position pos) {
@@ -82,19 +130,53 @@ public class D17 extends AoC {
             topOfPile = Math.max(position.y + 1, topOfPile);
         }
 
-        public void restAt(Position position, Shape shape) {
-            shape.getAllPositions(position).forEach(this::add);
+        public long restAt(Position position, Shape shape) {
+            List<Position> positions = shape.getAllPositions(position);
+            LongSummaryStatistics stats = positions.stream().mapToLong(Position::y).summaryStatistics();
+            positions.forEach(this::add);
+            nbShapesInPit++;
+            updateCacheKey(stats.getMin(), stats.getMax());
+            if (cacheKey.isComplete() && lookingForCycle) {
+                String key = cacheKey.getKey();
+                if (cache.containsKey(key)) {
+                    State state = cache.get(key);
+                    System.out.println("Found pattern of " + cacheKey.size() + " lines at shape n°"+nbShapesInPit);
+                    System.out.println(this);
+                    int cycleLength = (int) (nbShapesInPit - state.shapes);
+                    long cycleHeight = topOfPile - state.topOfPile;
+                    long cyclesToTheTop = (targetNumber - nbShapesInPit) / cycleLength;
+                    nbShapesInPit += cyclesToTheTop * cycleLength;
+                    heightOfCycles = cyclesToTheTop * cycleHeight;
+                    lookingForCycle = false;
+                    return cyclesToTheTop * cycleLength;
+                } else {
+                    cache.put(cacheKey.getKey(), new State(nbShapesInPit, topOfPile));
+                }
+            }
+            return 0;
+        }
+
+        private void updateCacheKey(long min, long max) {
+            for (long y0 = Math.max(cacheKey.bottom, min); y0 <= max; y0++) {
+                if (y0 >= cacheKey.top) {
+                    cacheKey.add(getLine((int) y0));
+                } else {
+                    cacheKey.set((int) y0 - cacheKey.bottom, getLine((int) y0));
+                }
+            }
+            for (int y = cacheKey.top; y < topOfPile; y++) {
+                cacheKey.add(getLine(y));
+            }
         }
 
 
-        public int addShape(Shape shape, int startTime, WindConditions wind, int startX) {
+        public long addShape(Shape shape, WindConditions wind, int startX) {
             int x = startX;
-            int time = startTime;
 
-            int y = topOfPile + 3;
+            long y = topOfPile + 3;
             boolean rest = false;
             while (!rest) {
-                int windMove = wind.wind(time);
+                int windMove = wind.wind();
                 if (canMoveTo(shape, x + windMove, y)) {
                     x = x + windMove;
                 }
@@ -102,33 +184,30 @@ public class D17 extends AoC {
                 if (canMoveTo(shape, x, y - 1)) {
                     y = y - 1;
                 } else {
-                   // System.out.println(toString(shape, new Position(x, y)));
-                    restAt(new Position(x, y), shape);
-                    rest = true;
+                    return restAt(new Position(x, y), shape);
                 }
-                time++;
             }
-            return time;
+            return 0;
         }
 
-        public boolean canMoveTo(Shape shape, int x, int y) {
+        public boolean canMoveTo(Shape shape, int x, long y) {
             return shape.getAllPositions(new Position(x, y)).stream().noneMatch(this::contains);
         }
 
-        public void addShapes(int number, Shape[] shapes, String windConditions, int startX) {
+        public void addShapes(long number, Shape[] shapes, String windConditions, int startX) {
+            this.targetNumber = number;
             int nbShapes = shapes.length;
-            int time = 0;
-            for (int i = 0; i < number; i++) {
-                Shape shape = shapes[i % nbShapes];
-                time = addShape(shape, time, new WindConditions(windConditions), startX);
+            WindConditions wind = new WindConditions(windConditions);
+            for (long i = 0; i < number; i++) {
+                Shape shape = shapes[(int) (i % nbShapes)];
+                i += addShape(shape, wind , startX);
             }
         }
 
-        public String toString(Shape shape, Position bottomLeft) {
+        public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("Top of pile : ").append(topOfPile).append("\n");
-            List<Position> positions = shape.getAllPositions(bottomLeft);
-            for (int y = topOfPile + 3 + shape.height; y >= 0; y--) {
+            for (long y = topOfPile; y >= 0; y--) {
                 char[] line = new char[width + 3];
                 line[0] = '|';
                 line[width + 1] = '|';
@@ -136,28 +215,39 @@ public class D17 extends AoC {
                 for (int x = 0; x < width; x++) {
                     Position current = new Position(x, y);
                     line[x + 1] = contains(current) ? '#' : '.';
-                    if (positions.contains(current)) {
-                        line[x + 1] = '@';
-                    }
                 }
                 sb.append(new String(line));
             }
             sb.append("+-------+\n");
+
             return sb.toString();
         }
+    }
+
+    public void partOne(String kind, String windConditions) {
+        Pit pit = new Pit(7);
+        pit.addShapes(2022, Shape.values(), windConditions, 2);
+        System.out.println(kind + " Tower Height [part 1]: " + pit.getHeightOfPile());
+    }
+
+
+    public void partTwo(String kind, String windConditions) {
+        Pit pit = new Pit(7);
+        pit.addShapes(1000000000000L, Shape.values(), windConditions, 2);
+        System.out.println(kind + " Tower Height [part 2]: " + pit.getHeightOfPile());
     }
 
 
     @Override
     public void run() {
-        String testWindConditions = readFile(getTestInputPath());
-        Pit testPit = new Pit(7);
-        testPit.addShapes(2022, Shape.values(), testWindConditions, 2);
-        System.out.println("Test Tower Height : " + testPit.topOfPile);
+        //String testWindConditions = readFile(getTestInputPath());
+        //partOne("Test", testWindConditions);
+        //partTwo("Test", testWindConditions);
 
         String windConditions = readFile(getInputPath());
-        Pit pit = new Pit(7);
-        pit.addShapes(2022, Shape.values(), windConditions, 2);
-        System.out.println("Real Tower Height : " + pit.topOfPile);
+        partOne("Real", windConditions);
+
+
+        //partTwo("Real", windConditions);
     }
 }
