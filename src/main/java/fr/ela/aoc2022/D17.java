@@ -141,8 +141,6 @@ public class D17 extends AoC {
                 String key = cacheKey.getKey();
                 if (cache.containsKey(key)) {
                     State state = cache.get(key);
-                    System.out.println("Found pattern of " + cacheKey.size() + " lines at shape n°"+nbShapesInPit);
-                    System.out.println(this);
                     int cycleLength = (int) (nbShapesInPit - state.shapes);
                     long cycleHeight = topOfPile - state.topOfPile;
                     long cyclesToTheTop = (targetNumber - nbShapesInPit) / cycleLength;
@@ -151,7 +149,7 @@ public class D17 extends AoC {
                     lookingForCycle = false;
                     return cyclesToTheTop * cycleLength;
                 } else {
-                    cache.put(cacheKey.getKey(), new State(nbShapesInPit, topOfPile));
+                    cache.put(key, new State(nbShapesInPit, topOfPile));
                 }
             }
             return 0;
@@ -239,14 +237,28 @@ public class D17 extends AoC {
         System.out.println(kind + " Tower Height [part 2]: " + pit.getHeightOfPile());
     }
 
+    public int findSmallestKey(String windConditions, int start, int result) {
+        int keySize = start;
+        while (true) {
+            keySize++;
+            Pit pit = new Pit(7, keySize);
+            pit.addShapes(2022, Shape.values(), windConditions, 2);
+            if (pit.getHeightOfPile() == result) {
+                return keySize;
+            }
+        }
+    }
+
 
     @Override
     public void run() {
         String testWindConditions = readFile(getTestInputPath());
+        System.out.println("Smallest key : "+findSmallestKey(testWindConditions, 12, 3068));
         partOne("Test", testWindConditions, 32);
         partTwo("Test", testWindConditions, 32);
 
         String windConditions = readFile(getInputPath());
+        System.out.println("Smallest key : "+findSmallestKey(windConditions, 32, 3135));
         partOne("Real", windConditions, 64);
         partTwo("Real", windConditions, 64);
     }
