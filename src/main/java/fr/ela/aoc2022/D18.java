@@ -1,9 +1,9 @@
 package fr.ela.aoc2022;
 
+import org.w3c.dom.css.Counter;
+
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class D18 extends AoC {
@@ -21,9 +21,12 @@ public class D18 extends AoC {
             );
         }
 
+        public long countNeighborsIn(Set<Position> holes) {
+            return adjacent().stream().filter(holes::contains).count();
+        }
     }
 
-    public record Droplet(Set<Position> touching) {
+    public record Hole(Set<Position> touching) {
         boolean contains(Position p) {
             return touching.contains(p);
         }
@@ -34,44 +37,10 @@ public class D18 extends AoC {
         return new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1]), Integer.parseInt(coords[2]));
     }
 
-    public class ProjectedSpace {
-
-        int maxX;
-        int maxY;
-        int maxZ;
-        int minX;
-        int minY;
-        int minZ;
-
-        Set<Position> positions = new HashSet<>();
-        Map<Position, List<Integer>> px = new HashMap<>();
-        Map<Position, List<Integer>> py = new HashMap<>();
-        Map<Position, List<Integer>> pz = new HashMap();
-
-        //List<Droplet> droplets = new ArrayList<>();
-
-        public void add(Position pos) {
-            positions.add(pos);
-            px.computeIfAbsent(new Position(pos.y, pos.z, 0), i -> new LinkedList<>()).add(pos.x);
-            py.computeIfAbsent(new Position(pos.x, pos.z, 0), i -> new LinkedList<>()).add(pos.y);
-            pz.computeIfAbsent(new Position(pos.x, pos.y, 0), i -> new LinkedList<>()).add(pos.z);
-
-            maxX = Math.max(maxX, pos.x);
-            maxY = Math.max(maxY, pos.y);
-            maxZ = Math.max(maxZ, pos.z);
-            minX = Math.min(minX, pos.x);
-            minY = Math.min(minY, pos.y);
-            minZ = Math.min(minZ, pos.z);
-        }
-
-        static boolean isRange(int i, int min, int max) {
-            return min <= i && i <= max;
-        }
-
-        public boolean inGrid(Position pos) {
-            return inRange(pos.x, minX, maxX) && inRange(pos.y, minY, maxY) && inRange(pos.z, minZ, maxZ);
-        }
-
+    /**
+     * For part one : projects all positions in a Map<Position, List[position on projected dimension]> and count extremities in segments.
+     */
+    public class VisibleSidesCounter {
 
         private int countVisible(List<Integer> list) {
             list.sort(Comparator.naturalOrder());
@@ -92,78 +61,136 @@ public class D18 extends AoC {
             return visible;
         }
 
-        public int countVisible() {
+        public int countVisible(Space space) {
+            Map<Position, List<Integer>> px = new HashMap<>();
+            Map<Position, List<Integer>> py = new HashMap<>();
+            Map<Position, List<Integer>> pz = new HashMap<>();
+            space.positions.forEach(pos -> {
+                px.computeIfAbsent(new Position(pos.y, pos.z, 0), i -> new LinkedList<>()).add(pos.x);
+                py.computeIfAbsent(new Position(pos.x, pos.z, 0), i -> new LinkedList<>()).add(pos.y);
+                pz.computeIfAbsent(new Position(pos.x, pos.y, 0), i -> new LinkedList<>()).add(pos.z);
+            });
             return Stream.of(px, py, pz).mapToInt(m ->
                     m.values().stream().mapToInt(this::countVisible).sum()).sum();
         }
+    }
 
-        public Set<Position> getInHolesPositions() {
-            Set<Position> allPositions = new HashSet<>();
-            for (int x = 0; x < maxX; x++) {
-                for (int y = 0; y < maxY; y++) {
-                    for (int z = 0; z < maxZ; z++) {
-                        allPositions.add(new Position(x, y, z));
+    class TouchingSidesCounter {
+        long count;
+
+        public void add(long count) {
+            this.count += count;
+        }
+    }
+
+    public class HoleDetector {
+
+        public long getInHolesPositions(Space space) {
+            Set<Position> holes = new HashSet<>();
+            for (int x = 0; x < space.maxX; x++) {
+                for (int y = 0; y < space.maxY; y++) {
+                    for (int z = 0; z < space.maxZ; z++) {
+                        holes.add(new Position(x, y, z));
                     }
                 }
             }
-            Set<Position> visitables = fill(findStart());
+            Set<Position> visitables = fill(findStart(space), space, new TouchingSidesCounter());
 
-            allPositions.removeAll(positions);
-            allPositions.removeAll(visitables);
+            holes.removeAll(space.positions);
+            holes.removeAll(visitables);
+            int nbPositionsInHoles = holes.size();
+            long touchingSidesInHoles = holes.stream().mapToLong(pos -> pos.countNeighborsIn(holes)).sum();
 
-            return allPositions;
+            return 6 * nbPositionsInHoles - touchingSidesInHoles;
         }
 
-        public Set<Position> fill(Position start) {
+        public Set<Position> fill(Position start, Space space, TouchingSidesCounter counter) {
             Set<Position> filled = new HashSet<>();
-            fill(start, filled);
+            fill(start, filled, space, counter);
             return filled;
         }
 
-        public Set<Position> fill(Position start, Set<Position> filled) {
+        private Set<Position> fill(Position start, Set<Position> filled, Space space, TouchingSidesCounter counter) {
             Set<Position> newVisited = new HashSet<>();
             filled.add(start);
             for (Position next : start.adjacent()) {
-                if (! newVisited.contains(next) && ! filled.contains(next) && !positions.contains(next) && inGrid(next)) {
-                    newVisited.addAll(fill(next, filled));
+                if (!newVisited.contains(next) && !filled.contains(next) && !space.positions.contains(next) && space.inGrid(next)) {
+                    counter.add(1);
+                    newVisited.addAll(fill(next, filled, space, counter));
                 }
             }
             return newVisited;
         }
 
 
-        private Position findStart() {
+        private Position findStart(Space space) {
             int x = 0;
             int y = 0;
             int z = 0;
             Position start = new Position(x, y, z);
-            while (positions.contains(start) && x <= maxX) {
-                x = x+1;
+            while (space.positions.contains(start) && x <= space.maxX) {
+                x = x + 1;
             }
-            if (x == maxX) {
+            if (x == space.maxX) {
                 throw new IllegalStateException();
             }
             return start;
         }
     }
 
-    public void partOne(String kind, Path path) {
-        ProjectedSpace space = new ProjectedSpace();
-        stream(path, this::readLine).forEach(space::add);
-        System.out.println(kind + " part 1 result : " + space.countVisible());
+    public class Space {
+
+        final int maxX, maxY, maxZ, minX, minY, minZ;
+
+        Set<Position> positions = new HashSet<>();
+
+        public Space(List<Position> list) {
+            int mx = 0, my = 0, mz = 0, mX = 0, mY = 0, mZ = 0;
+            for (Position pos : list) {
+                positions.add(pos);
+                mX = Math.max(mX, pos.x);
+                mY = Math.max(mY, pos.y);
+                mZ = Math.max(mZ, pos.z);
+                mx = Math.min(mx, pos.x);
+                my = Math.min(my, pos.y);
+                mz = Math.min(mz, pos.z);
+            }
+            maxX = mX;
+            maxZ = mZ;
+            maxY = mY;
+            minX = mx;
+            minY = my;
+            minZ = mz;
+        }
+
+        public boolean inGrid(Position pos) {
+            return inRange(pos.x, minX, maxX + 1) && inRange(pos.y, minY, maxY + 1) && inRange(pos.z, minZ, maxZ + 1);
+        }
+
     }
 
-    public void partTwo(String kind, Path path) {
-        ProjectedSpace space = new ProjectedSpace();
-        stream(path, this::readLine).forEach(space::add);
-        System.out.println(kind + " part 2 result : " + space.getInHolesPositions());
+    public int partOne(String kind, Space space) {
+        VisibleSidesCounter counter = new VisibleSidesCounter();
+        int count = counter.countVisible(space);
+        System.out.println(kind + " part 1 result : " + counter.countVisible(space));
+        return count;
+    }
+
+    public void partTwo(String kind, Space space, int visibleSidesFromPartOne) {
+        HoleDetector holeDetector = new HoleDetector();
+        long facesVisibleInHoles = holeDetector.getInHolesPositions(space);
+        long result = visibleSidesFromPartOne - facesVisibleInHoles;
+        System.out.println(kind + " part 2 result : " + result);
     }
 
     @Override
     public void run() {
-        partOne("Test", getTestInputPath());
-        partTwo("Test", getTestInputPath());
-        partOne("Real", getInputPath());
-        partTwo("Test", getInputPath());
+        Space test = new Space(list(getTestInputPath(), this::readLine));
+        int visibleInTest = partOne("Test", test);
+        partTwo("Test", test, visibleInTest);
+
+        Space space = new Space(list(getInputPath(), this::readLine));
+        int visible = partOne("Real", space);
+        partTwo("Real", space, visible);
     }
 }
