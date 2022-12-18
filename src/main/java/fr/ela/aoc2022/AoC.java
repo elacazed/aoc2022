@@ -100,8 +100,8 @@ public abstract class AoC {
             throw new RuntimeException(ioe);
         }
     }
-    boolean inRange(int x, int low, int high) {
-        return x >= low && x < high;
+    boolean inRange(int i, int low, int high) {
+        return i >= low && i < high;
     }
 
     public static void main(String[] args) {

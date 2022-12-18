@@ -1,8 +1,5 @@
 package fr.ela.aoc2022;
 
-import org.w3c.dom.css.Counter;
-
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -75,14 +72,6 @@ public class D18 extends AoC {
         }
     }
 
-    class TouchingSidesCounter {
-        long count;
-
-        public void add(long count) {
-            this.count += count;
-        }
-    }
-
     public class HoleDetector {
 
         public long getInHolesPositions(Space space) {
@@ -94,7 +83,7 @@ public class D18 extends AoC {
                     }
                 }
             }
-            Set<Position> visitables = fill(findStart(space), space, new TouchingSidesCounter());
+            Set<Position> visitables = fill(findStart(space), space);
 
             holes.removeAll(space.positions);
             holes.removeAll(visitables);
@@ -104,19 +93,18 @@ public class D18 extends AoC {
             return 6 * nbPositionsInHoles - touchingSidesInHoles;
         }
 
-        public Set<Position> fill(Position start, Space space, TouchingSidesCounter counter) {
+        public Set<Position> fill(Position start, Space space) {
             Set<Position> filled = new HashSet<>();
-            fill(start, filled, space, counter);
+            fill(start, filled, space);
             return filled;
         }
 
-        private Set<Position> fill(Position start, Set<Position> filled, Space space, TouchingSidesCounter counter) {
+        private Set<Position> fill(Position start, Set<Position> filled, Space space) {
             Set<Position> newVisited = new HashSet<>();
             filled.add(start);
             for (Position next : start.adjacent()) {
                 if (!newVisited.contains(next) && !filled.contains(next) && !space.positions.contains(next) && space.inGrid(next)) {
-                    counter.add(1);
-                    newVisited.addAll(fill(next, filled, space, counter));
+                    newVisited.addAll(fill(next, filled, space));
                 }
             }
             return newVisited;
@@ -134,6 +122,7 @@ public class D18 extends AoC {
             if (x == space.maxX) {
                 throw new IllegalStateException();
             }
+            System.out.println("Found start at "+start);
             return start;
         }
     }
