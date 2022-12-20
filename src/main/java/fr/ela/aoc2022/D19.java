@@ -18,23 +18,9 @@ public class D19 extends AoC {
     boolean isRobot(int option) {
         return inRange(option, ORE, GEODE + 1);
     }
-
-
     private static final Pattern ORE_COST_PATTERN = Pattern.compile(" Each [a-z]+ robot costs ([0-9]+) ore");
     private static final Pattern ORE_AND_CLAY_COST_PATTERN = Pattern.compile(" Each obsidian robot costs ([0-9]+) ore and ([0-9]+) clay");
     private static final Pattern ORE_AND_OBSIDIAN_COST_PATTERN = Pattern.compile(" Each [a-z]+ robot costs ([0-9]+) ore and ([0-9]+) obsidian");
-
-    public record Cost(int ore, int clay, int obsidian) {
-        int get(int type) {
-            return switch (type) {
-                case ORE -> ore;
-                case CLAY -> clay;
-                case OBSIDIAN -> obsidian;
-                case GEODE -> 0;
-                default -> throw new IllegalStateException();
-            };
-        }
-    }
 
     public class Blueprint {
         final int id;
@@ -169,8 +155,10 @@ public class D19 extends AoC {
     public void run() {
         List<Blueprint> testBlueprints = stream(getTestInputPath(), this::parseBlueprint).toList();
         System.out.println("Test part one : " + testBlueprints.stream().mapToInt(bp -> bp.qualityLevel(24)).sum());
+        System.out.println("Test part two : " + testBlueprints.stream().mapToInt(bp -> bp.getMaxGeodes(32)).reduce(1, (x,y) -> x*y));
 
         List<Blueprint> blueprints = stream(getInputPath(), this::parseBlueprint).toList();
         System.out.println("Real part one : " + blueprints.stream().mapToInt(bp -> bp.qualityLevel(24)).sum());
+        System.out.println("Real part two : " +blueprints.stream().filter(bp -> bp.id < 4).mapToInt(bp -> bp.getMaxGeodes(32)).reduce(1, (x,y) -> x*y));
     }
 }
