@@ -9,16 +9,24 @@ import java.util.stream.IntStream;
 
 public class D20 extends AoC {
 
-    record Number(int position, int value) {
+    private static final long KEY = 811589153;
+
+    record Number(int position, long value) {
 
     }
 
     record Secret(List<Number> data) {
 
-        public Secret mix() {
+        public Secret multiply(Long key) {
+            return new Secret(data.stream().map(n -> new Number(n.position, n.value * key)).collect(Collectors.toList()));
+        }
+
+        public Secret mix(int times) {
             Secret result = new Secret(new ArrayList<>(data));
-            for (Number n : data) {
-                result.move(n);
+            for (int i = 0; i < times; i++) {
+                for (Number n : data) {
+                    result.move(n);
+                }
             }
             return result;
         }
@@ -27,17 +35,19 @@ public class D20 extends AoC {
             int currentIndex = data.indexOf(number);
             Number toMove = data.remove(currentIndex);
             int size = data.size();
-            int newPosition = ((toMove.value + currentIndex) >= 0 ?
-                    ((toMove.value + currentIndex) % size) :
-                    (size - (-(toMove.value + currentIndex) % (size)))
-            );
+            int newIndex;
+            if (toMove.value + currentIndex >= 0) {
+                newIndex = (int) ((toMove.value + currentIndex) % size);
+            } else {
+                newIndex = (int) (size - (-(toMove.value + currentIndex) % (size)));
+            }
             // Move the number:
-            data.add(newPosition == 0 ? size : newPosition, toMove);
+            data.add(newIndex == 0 ? size : newIndex, toMove);
             //System.out.println("After moving " + number.value + " : " + this);
         }
 
         public String toString() {
-            return data.stream().map(n -> Integer.toString(n.value())).collect(Collectors.joining(",", "[", "]"));
+            return data.stream().map(n -> Long.toString(n.value())).collect(Collectors.joining(",", "[", "]"));
         }
 
         public long getGroveCoordinates() {
@@ -58,8 +68,13 @@ public class D20 extends AoC {
     }
 
     public void partOne(String kind, Secret secret) {
-        Secret mixed = secret.mix();
-        System.out.println(kind + " Mixed secret : " + mixed);
+        Secret mixed = secret.mix(1);
+        System.out.println(kind + " coordinates : " + mixed.getGroveCoordinates());
+    }
+
+    public void partTwo(String kind, Secret secret) {
+        Secret mult = secret.multiply(KEY);
+        Secret mixed = mult.mix(10);
         System.out.println(kind + " coordinates : " + mixed.getGroveCoordinates());
     }
 
@@ -67,8 +82,11 @@ public class D20 extends AoC {
     public void run() {
         Secret test = getInput(getTestInputPath());
         partOne("Test", test);
+        partTwo("Test", test);
 
         Secret secret = getInput(getInputPath());
         partOne("Real", secret);
+        partTwo("Real", secret);
     }
+
 }
