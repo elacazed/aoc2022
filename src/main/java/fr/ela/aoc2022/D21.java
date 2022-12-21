@@ -140,16 +140,18 @@ public class D21 extends AoC {
 
     public void partTwo(String kind, Path path) {
         MonkeyMap monkeyMap = parse(path);
-        // Get root and human.
+        // Remove Human to stop when needed.
         monkeyMap.resolved.remove("humn");
         monkeyMap.resolve();
+        if (monkeyMap.unresolved.values().stream().anyMatch(m -> m instanceof BiFunctionMonkey)) {
+            throw new IllegalStateException("I can't solve this!");
+        }
 
         FunctionMonkey root = (FunctionMonkey) monkeyMap.unresolved.get("root");
         long value = root.value;
 
         FunctionMonkey r = (FunctionMonkey) monkeyMap.unresolved.get(root.operand);
         Function<Long, Long> function = Function.identity();
-        Function<Long, Long> f2 = Function.identity();
         do {
             function = function.andThen(r.inverse);
             r = (FunctionMonkey) monkeyMap.unresolved.get(r.operand);
