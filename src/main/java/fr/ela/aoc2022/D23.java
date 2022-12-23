@@ -172,11 +172,11 @@ public class D23 extends AoC {
 
     @Override
     public void run() {
-        Grid testGrid = partOne("Test", getTestInputPath());// 25
-        Grid grid = partOne("Real", getInputPath());
+        Grid testGrid = partOne("Test", getTestInputPath());// 110
+        Grid grid = partOne("Real", getInputPath()); // 3815
 
-        partTwo("Test", testGrid);
-        partTwo("Real", grid);
+        partTwo("Test", testGrid); // 19
+        partTwo("Real", grid); // 893
 
     }
 
