@@ -149,27 +149,34 @@ public class D23 extends AoC {
         return grid;
     }
 
-    public void partOne(String kind, Path path) {
+    public Grid partOne(String kind, Path path) {
         Grid grid = readInput(path);
         for (int i = 0; i < 10; i++) {
             grid.round();
         }
         System.out.println(grid);
         System.out.println(kind + " empty tiles in rectangle : " + (grid.rectangleSize() - grid.positions.size()));
+        return grid;
     }
 
-    public void partTwo(String kind, Path path) {
+    public void partTwo(String kind, Grid grid) {
+        int rounds = 10;
+        while (grid.round() > 0) {
+            rounds++;
+        }
+        System.out.println(grid);
+        System.out.println(kind + " : elves stop moving at round " + (rounds+1));
 
 
     }
 
     @Override
     public void run() {
-        partOne("Test", getTestInputPath());// 25
-        partOne("Real", getInputPath());
+        Grid testGrid = partOne("Test", getTestInputPath());// 25
+        Grid grid = partOne("Real", getInputPath());
 
-        partTwo("Test", getTestInputPath());
-        partTwo("Real", getInputPath());
+        partTwo("Test", testGrid);
+        partTwo("Real", grid);
 
     }
 
