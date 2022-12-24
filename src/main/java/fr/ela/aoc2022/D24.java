@@ -1,7 +1,6 @@
 package fr.ela.aoc2022;
 
 import java.nio.file.Path;
-import java.sql.Array;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -91,23 +90,17 @@ public class D24 extends AoC {
     }
 
 
-    public void partOne(String kind, Path path) {
-        List<String> lines = list(path);
-        final int maxY = lines.size() - 2;
-        final int maxX = lines.get(0).length() - 2;
+    public interface Stopper {
+        boolean stop(Grid grid, Set<Position> positions);
 
-        List<Blizzard> blizzards = readBlizzards(lines);
-
-        long result = solve(maxY, maxX, blizzards);
-        System.out.println(kind+" part One : "+result);
+        Position getNewDestination(Grid grid);
     }
 
-    private long solve(int maxY, int maxX, List<Blizzard> blizzards) {
+    private long solve(int maxY, int maxX, List<Blizzard> blizzards, Stopper stopper) {
         Set<Position> states = new HashSet<>();
         Position start = new Position(1, 0);
         states.add(new Position(1, 0));
         Position destination = new Position(maxX, maxY + 1);
-        boolean realEnd = false;
         for (long i = 1; true; i++) {
             Grid grid = new Grid(maxX, maxY, start, destination, new HashSet<>());
             blizzards = blizzards.stream()
@@ -118,24 +111,103 @@ public class D24 extends AoC {
                     .flatMap(s -> Arrays.stream(Direction.values()).map(d -> d.move(s)).filter(grid::reachable))
                     .collect(Collectors.toSet());
             if (states.contains(destination)) {
-                return i;
+                if (stopper.stop(grid, states)) {
+                    return i;
+                } else {
+                    states = new HashSet<>();
+                    states.add(destination);
+                    start = destination;
+                    destination = stopper.getNewDestination(grid);
+                }
             }
         }
     }
 
 
+    public void partOne(String kind, Path path) {
+        List<String> lines = list(path);
+        final int maxY = lines.size() - 2;
+        final int maxX = lines.get(0).length() - 2;
+
+        List<Blizzard> blizzards = readBlizzards(lines);
+
+        long result = solve(maxY, maxX, blizzards, new PartOneStopper());
+        System.out.println(kind + " part One : " + result);
+    }
+
+    public class PartOneStopper implements Stopper {
+
+        @Override
+        public boolean stop(Grid grid, Set<Position> positions) {
+            return positions.contains(grid.end);
+        }
+
+        @Override
+        public Position getNewDestination(Grid grid) {
+            return grid.end;
+        }
+    }
+
     public void partTwo(String kind, Path path) {
+        List<String> lines = list(path);
+        final int maxY = lines.size() - 2;
+        final int maxX = lines.get(0).length() - 2;
+
+        List<Blizzard> blizzards = readBlizzards(lines);
+
+        long result = solve(maxY, maxX, blizzards, new PartTwoStopper(maxX, maxY));
+        System.out.println(kind + " part Two : " + result);
+
+    }
 
 
+
+    public class PartTwoStopper implements Stopper {
+
+        private final Position start;
+        private final Position end;
+        private Position destination;
+
+        boolean reachedEndOnce = false;
+
+        public PartTwoStopper(int maxX, int maxY) {
+            start = new Position(1, 0);
+            end = new Position(maxX, maxY + 1);
+            destination = end;
+        }
+
+        @Override
+        public boolean stop(Grid grid, Set<Position> positions) {
+            if (positions.contains(destination)) {
+                if (destination == start) {
+                    destination = end;
+                    return false;
+                } else {
+                    if (reachedEndOnce) {
+                        return true;
+                    } else {
+                        reachedEndOnce = true;
+                        destination = start;
+                        return false;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public Position getNewDestination(Grid grid) {
+            return destination;
+        }
     }
 
     @Override
     public void run() {
-        partOne("Test", getTestInputPath());
-        partOne("Real", getInputPath());
+        partOne("Test", getTestInputPath()); // 18
+        partOne("Real", getInputPath()); // 301
 
-        //partTwo("Test", ); // 19
-        //partTwo("Real", ); // 893
+        partTwo("Test", getTestInputPath()); // 54
+        partTwo("Real", getInputPath()); // 859
 
     }
 
