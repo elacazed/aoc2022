@@ -15,7 +15,6 @@ public class D25 extends AoC {
             value += (digit * digitValue);
             power--;
         }
-        System.out.println("SNAFU : " + snafu + ", value = " + value+", "+decimalToSnafu(value));
         return value;
     }
 
@@ -40,26 +39,23 @@ public class D25 extends AoC {
             int base5Digit = base5.charAt(index) - '0';
             base5Digit += retenue;
             switch (base5Digit) {
-                case 0:
-                case 1:
-                case 2:
+                case 0, 1, 2 -> {
                     sb.append(base5Digit);
                     retenue = 0;
-                    break;
-                case 3:
+                }
+                case 3 -> {
                     sb.append("=");
                     retenue = 1;
-                    break;
-                case 4:
+                }
+                case 4 -> {
                     sb.append("-");
                     retenue = 1;
-                    break;
-                case 5:
+                }
+                case 5 -> {
                     sb.append("0");
                     retenue = 1;
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + base5Digit);
+                }
+                default -> throw new IllegalStateException("Unexpected value: " + base5Digit);
             }
             index --;
         }
@@ -77,8 +73,8 @@ public class D25 extends AoC {
 
     @Override
     public void run() {
-        partOne("Test", getTestInputPath()); // 18
-        partOne("Real", getInputPath()); // 301
+        partOne("Test", getTestInputPath()); // 2=-1=0
+        partOne("Real", getInputPath()); // 2----0=--1122=0=0021
 
         //partTwo("Test", getTestInputPath()); // 54
         //partTwo("Real", getInputPath()); // 859
