@@ -57,7 +57,6 @@ public class D22 extends AoC {
         }
     }
 
-    /** Classes for Part 1 */
     /**
      * Range : represents a line or a column limits in input, used to wrap around the map for part 1.
      *
@@ -84,7 +83,7 @@ public class D22 extends AoC {
     record Position(int x, int y) {
 
         public String toString() {
-            return "["+x+","+y+"]";
+            return "[" + x + "," + y + "]";
         }
     }
 
@@ -136,44 +135,24 @@ public class D22 extends AoC {
             }
         }
 
-        Position move(Position from, Direction direction) {
-            Position to = switch (direction) {
-                case UP -> moveUp(from);
-                case DOWN -> moveDown(from);
-                case LEFT -> moveLeft(from);
-                case RIGHT -> moveRight(from);
+        Position move(Position from, Direction direction, boolean wrap) {
+            Position newPosition = switch (direction) {
+                case UP -> new Position(from.x, from.y - 1);
+                case DOWN -> new Position(from.x, from.y + 1);
+                case LEFT -> new Position(from.x - 1, from.y);
+                case RIGHT -> new Position(from.x + 1, from.y);
             };
-            if (walls.contains(to)) {
-                return from;
-            } else {
-                return to;
-            }
+            return wrap ? wrap(newPosition, direction) : newPosition;
         }
 
-        private Position moveUp(Position from) {
-            int y = from.y - 1;
-            Range r = columns.get(from.x);
-            return new Position(from.x, r.wrapDown(y));
+        public Position wrap(Position from, Direction direction) {
+            return switch (direction) {
+                case UP -> new Position(from.x, columns.get(from.x).wrapDown(from.y));
+                case DOWN -> new Position(from.x, columns.get(from.x).wrapUp(from.y));
+                case LEFT -> new Position(lines.get(from.y).wrapDown(from.x), from.y);
+                case RIGHT -> new Position(lines.get(from.y).wrapUp(from.x), from.y);
+            };
         }
-
-        private Position moveDown(Position from) {
-            int y = from.y + 1;
-            Range r = columns.get(from.x);
-            return new Position(from.x, r.wrapUp(y));
-        }
-
-        private Position moveLeft(Position from) {
-            int x = from.x - 1;
-            Range r = lines.get(from.y);
-            return new Position(r.wrapDown(x), from.y);
-        }
-
-        private Position moveRight(Position from) {
-            int x = from.x + 1;
-            Range r = lines.get(from.y);
-            return new Position(r.wrapUp(x), from.y);
-        }
-
     }
 
 
@@ -213,12 +192,7 @@ public class D22 extends AoC {
         }
 
         public Transition getTransition(Face from, Direction d) {
-            String key = from.name + d.name();
-            if (transitions.containsKey(key)) {
-                return transitions.get(key);
-            } else {
-                return NOOP;
-            }
+            return transitions.getOrDefault(from.name + d.name(), NOOP);
         }
 
     }
@@ -226,6 +200,8 @@ public class D22 extends AoC {
     public class Walker {
         Position position;
         Direction direction;
+
+        private int walks = 0;
 
         Walker(Position start) {
             position = start;
@@ -253,28 +229,24 @@ public class D22 extends AoC {
         }
 
         public void walk(Cube cube, int steps) {
+            walks++;
             for (int i = 0; i < steps; i++) {
                 Face fromFace = cube.getFace(position);
-                Position pos = cube.grid.move(position, direction);
-                if (pos.equals(position)) {
-                    return;
-                }
+                Position pos = cube.grid.move(position, direction, false);
+
                 if (fromFace.isOnFace(pos)) {
-                    this.position = pos;
+                    if (!cube.grid.walls.contains(pos)) {
+                        this.position = pos;
+                    }
                 } else {
                     Transition transition = cube.getTransition(fromFace, direction);
                     if (transition.equals(NOOP)) {
                         this.position = pos;
                     } else {
                         Position portal = transition.translate(position);
-                        if (cube.grid.walls.contains(portal)) {
-                            return;
-                        } else {
-                            pos = position;
-                            Direction d = direction;
+                        if (!cube.grid.walls.contains(portal)) {
                             this.position = portal;
                             this.direction = transition.translate(direction);
-                            System.out.println("Transition " + fromFace.name + d.name() + " Pos = " + pos + " -> " + portal + ", " + direction);
                         }
                     }
                 }
@@ -283,8 +255,8 @@ public class D22 extends AoC {
 
         public void walk(Grid grid, int steps) {
             for (int i = 0; i < steps; i++) {
-                Position pos = grid.move(position, direction);
-                if (pos.equals(position)) {
+                Position pos = grid.move(position, direction, true);
+                if (grid.walls.contains(pos)) {
                     return;
                 } else {
                     this.position = pos;
@@ -354,12 +326,12 @@ public class D22 extends AoC {
                 testTransitions);
 
 
-        //partTwo("Test", testGrid, testCube, testInstructions); // 5031
+        partTwo("Test", testGrid, testCube, testInstructions); // 5031
 
         List<List<String>> input = splitOnEmptyLines(getInputPath());
         List<Instruction> instructions = readInstructions(input.get(1).get(0));
         Grid grid = new Grid(input.get(0));
-        //partOne("Real", grid, instructions); // 162186
+        partOne("Real", grid, instructions); // 162186
         Map<String, Transition> transitions = new HashMap<>();
         transitions.put("topLEFT", new Transition(p -> new Position(1, 151 - p.y), d -> Direction.RIGHT));
         transitions.put("leftLEFT", new Transition(p -> new Position(51, 151 - p.y), d -> Direction.RIGHT));
@@ -393,7 +365,7 @@ public class D22 extends AoC {
                 transitions);
 
 
-        partTwo("Real", grid, cube, instructions);
+        partTwo("Real", grid, cube, instructions); //55267
 
     }
 
