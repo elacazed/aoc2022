@@ -24,7 +24,6 @@ public class D22 extends AoC {
     public List<Instruction> readInstructions(String string) {
         List<Instruction> instructions = new ArrayList<>();
         int amount = -1;
-        Direction d = Direction.UP;
 
         for (int i = 0; i < string.length(); i++) {
             char c = string.charAt(i);
@@ -45,7 +44,7 @@ public class D22 extends AoC {
     /**
      * Directions
      */
-    enum Direction {
+    public enum Direction {
         RIGHT, DOWN, LEFT, UP;
 
         Direction turn(Direction d) {
@@ -65,12 +64,12 @@ public class D22 extends AoC {
      */
     record Range(int min, int max) {
 
-        int wrapDown(int x) {
-            return x == min ? max - 1 : x;
+        int wrapDown(int value) {
+            return value == min ? max - 1 : value;
         }
 
-        int wrapUp(int x) {
-            return x == max ? min + 1 : x;
+        int wrapUp(int value) {
+            return value == max ? min + 1 : value;
         }
     }
 
@@ -85,7 +84,18 @@ public class D22 extends AoC {
         public String toString() {
             return "[" + x + "," + y + "]";
         }
+
+        public Position step(Direction direction) {
+            return switch (direction) {
+                case UP -> new Position(x, y - 1);
+                case DOWN -> new Position(x, y + 1);
+                case LEFT -> new Position(x - 1, y);
+                case RIGHT -> new Position(x + 1, y);
+            };
+        }
     }
+
+    record PositionAndDirection(Position position, Direction direction) {}
 
     /**
      * The grid.
@@ -95,6 +105,10 @@ public class D22 extends AoC {
 
         Map<Integer, Range> lines;
         Map<Integer, Range> columns;
+
+        public Grid() {
+            walls = new HashSet<>();
+        }
 
         public Grid(List<String> data) {
             walls = new HashSet<>();
@@ -135,14 +149,9 @@ public class D22 extends AoC {
             }
         }
 
-        Position move(Position from, Direction direction, boolean wrap) {
-            Position newPosition = switch (direction) {
-                case UP -> new Position(from.x, from.y - 1);
-                case DOWN -> new Position(from.x, from.y + 1);
-                case LEFT -> new Position(from.x - 1, from.y);
-                case RIGHT -> new Position(from.x + 1, from.y);
-            };
-            return wrap ? wrap(newPosition, direction) : newPosition;
+        PositionAndDirection move(Position from, Direction direction) {
+            Position newPosition = wrap(from.step(direction), direction);
+            return new PositionAndDirection(newPosition, direction);
         }
 
         public Position wrap(Position from, Direction direction) {
@@ -181,7 +190,17 @@ public class D22 extends AoC {
     static Transition NOOP = new Transition(Function.identity(), Function.identity());
 
 
-    public record Cube(Grid grid, List<Face> faces, Map<String, Transition> transitions) {
+    public class Cube extends Grid {
+
+        final List<Face> faces;
+        final Map<String, Transition> transitions;
+
+        public Cube(Grid grid, List<Face> faces, Map<String, Transition> transitions) {
+            super();
+            walls.addAll(grid.walls);
+            this.faces = faces;
+            this.transitions = transitions;
+        }
 
         public Face getFace(Position position) {
             Face face = faces.stream().filter(f -> f.isOnFace(position)).findFirst().orElse(null);
@@ -195,29 +214,29 @@ public class D22 extends AoC {
             return transitions.getOrDefault(from.name + d.name(), NOOP);
         }
 
+        PositionAndDirection move(Position from, Direction direction) {
+            Face fromFace = getFace(from);
+            Position pos = from.step(direction);
+            Direction d = direction;
+            if (! fromFace.isOnFace(pos)) {
+                Transition transition = getTransition(fromFace, direction);
+                if (! transition.equals(NOOP)) {
+                    pos = transition.translate(from);
+                    d = transition.translate(d);
+                }
+            }
+            return new PositionAndDirection(pos, d);
+        }
+
     }
 
     public class Walker {
         Position position;
         Direction direction;
 
-        private int walks = 0;
-
         Walker(Position start) {
             position = start;
             direction = Direction.RIGHT;
-        }
-
-        public String toString() {
-            return direction.name() + " [" + position.x + ", " + position.y + "]";
-        }
-
-        public void follow(Instruction instruction, Cube cube) {
-            if (instruction.turn == null) {
-                walk(cube, instruction.steps);
-            } else {
-                this.direction = direction.turn(instruction.turn);
-            }
         }
 
         public void follow(Instruction instruction, Grid grid) {
@@ -228,38 +247,14 @@ public class D22 extends AoC {
             }
         }
 
-        public void walk(Cube cube, int steps) {
-            walks++;
-            for (int i = 0; i < steps; i++) {
-                Face fromFace = cube.getFace(position);
-                Position pos = cube.grid.move(position, direction, false);
-
-                if (fromFace.isOnFace(pos)) {
-                    if (!cube.grid.walls.contains(pos)) {
-                        this.position = pos;
-                    }
-                } else {
-                    Transition transition = cube.getTransition(fromFace, direction);
-                    if (transition.equals(NOOP)) {
-                        this.position = pos;
-                    } else {
-                        Position portal = transition.translate(position);
-                        if (!cube.grid.walls.contains(portal)) {
-                            this.position = portal;
-                            this.direction = transition.translate(direction);
-                        }
-                    }
-                }
-            }
-        }
-
         public void walk(Grid grid, int steps) {
             for (int i = 0; i < steps; i++) {
-                Position pos = grid.move(position, direction, true);
-                if (grid.walls.contains(pos)) {
+                PositionAndDirection pos = grid.move(position, direction);
+                if (grid.walls.contains(pos.position)) {
                     return;
                 } else {
-                    this.position = pos;
+                    this.position = pos.position;
+                    this.direction = pos.direction;
                 }
             }
         }
@@ -294,7 +289,7 @@ public class D22 extends AoC {
         List<List<String>> testInput = splitOnEmptyLines(getTestInputPath());
         List<Instruction> testInstructions = readInstructions(testInput.get(1).get(0));
         Grid testGrid = new Grid(testInput.get(0));
-        //partOne("Test", testGrid, testInstructions); // 6032
+        partOne("Test", testGrid, testInstructions); // 6032
         Map<String, Transition> testTransitions = new HashMap<>();
         testTransitions.put("topLEFT", new Transition(p -> new Position(p.y + 4, 5), d -> Direction.DOWN));
         testTransitions.put("topRIGHT", new Transition(p -> new Position(16, 13 - p.y), d -> Direction.LEFT));
